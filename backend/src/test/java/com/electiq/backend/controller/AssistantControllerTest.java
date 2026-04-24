@@ -33,6 +33,7 @@ public class AssistantControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
+    @SuppressWarnings("null")
     void shouldReturnAnswerForQuestion() throws Exception {
         AssistantRequest request = new AssistantRequest();
         request.setQuestion("How do I register to vote?");

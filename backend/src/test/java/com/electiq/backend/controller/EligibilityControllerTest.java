@@ -33,6 +33,7 @@ public class EligibilityControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
+    @SuppressWarnings("null")
     void shouldReturn200ForValidEligibleRequest() throws Exception {
         EligibilityRequest request = new EligibilityRequest();
         request.setAge(25);
@@ -52,6 +53,7 @@ public class EligibilityControllerTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void shouldReturnProperResponseForUnderageRequest() throws Exception {
         EligibilityRequest request = new EligibilityRequest();
         request.setAge(16);

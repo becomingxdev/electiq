@@ -1,39 +1,90 @@
-import React, { useState, useRef, useEffect } from 'react';
-import api from '../api/axios';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { askAssistant } from '../api/electiqService';
+
+const INITIAL_MESSAGES = [
+  { role: 'assistant', content: 'Hello! I am ElectIQ, your AI election assistant. How can I help you today?' },
+];
+
+const UserIcon = () => (
+  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
+const BotIcon = () => (
+  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+);
+
+const TypingIndicator = () => (
+  <div className="flex justify-start">
+    <div className="flex flex-row">
+      <div className="w-8 h-8 rounded-full bg-purple-600 mr-3 flex items-center justify-center flex-shrink-0">
+        <BotIcon />
+      </div>
+      <div className="p-4 rounded-2xl bg-white border border-gray-100 rounded-tl-none flex items-center space-x-2">
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+      </div>
+    </div>
+  </div>
+);
+
+const ChatMessage = ({ msg }) => {
+  const isUser = msg.role === 'user';
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-1 ${isUser ? 'bg-blue-600 ml-3' : 'bg-purple-600 mr-3'}`}>
+          {isUser ? <UserIcon /> : <BotIcon />}
+        </div>
+        <div className={`p-4 rounded-2xl shadow-sm ${
+          isUser
+            ? 'bg-blue-600 text-white rounded-tr-none'
+            : msg.error
+              ? 'bg-red-50 text-red-700 border border-red-100 rounded-tl-none'
+              : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+        }`}>
+          <p className="whitespace-pre-wrap">{msg.content}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AIAssistant = () => {
   const [question, setQuestion] = useState('');
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hello! I am ElectIQ, your AI election assistant. How can I help you today?' }
-  ]);
+  const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, loading]);
+  }, [messages, loading, scrollToBottom]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!question.trim()) return;
+    const trimmed = question.trim();
+    if (!trimmed) return;
 
-    const userMsg = { role: 'user', content: question.trim() };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
     setQuestion('');
     setLoading(true);
 
     try {
-      const response = await api.post('/assistant/ask', { question: userMsg.content });
-      // Depending on API structure, it could be response.data.answer or response.data.response
-      const answer = response.data.answer || response.data.response || (typeof response.data === 'string' ? response.data : 'I received a response, but it was in an unexpected format.');
-      
-      setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error while trying to answer your question. Please try again.', error: true }]);
+      const answer = await askAssistant(trimmed);
+      setMessages((prev) => [...prev, { role: 'assistant', content: answer }]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.', error: true },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -50,46 +101,9 @@ const AIAssistant = () => {
         {/* Chat Messages */}
         <div className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50/50">
           {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`flex max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                {/* Avatar */}
-                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-1 ${
-                  msg.role === 'user' ? 'bg-blue-600 ml-3' : 'bg-purple-600 mr-3'
-                }`}>
-                  {msg.role === 'user' ? (
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                  ) : (
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                  )}
-                </div>
-                
-                {/* Bubble */}
-                <div className={`p-4 rounded-2xl shadow-sm ${
-                  msg.role === 'user' 
-                    ? 'bg-blue-600 text-white rounded-tr-none' 
-                    : msg.error 
-                      ? 'bg-red-50 text-red-700 border border-red-100 rounded-tl-none'
-                      : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
-                }`}>
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
-              </div>
-            </div>
+            <ChatMessage key={idx} msg={msg} />
           ))}
-          {loading && (
-            <div className="flex justify-start">
-              <div className="flex flex-row">
-                <div className="w-8 h-8 rounded-full bg-purple-600 mr-3 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                </div>
-                <div className="p-4 rounded-2xl bg-white border border-gray-100 rounded-tl-none flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                </div>
-              </div>
-            </div>
-          )}
+          {loading && <TypingIndicator />}
           <div ref={messagesEndRef} />
         </div>
 
@@ -110,7 +124,9 @@ const AIAssistant = () => {
               className="bg-purple-600 text-white p-3 px-6 rounded-xl hover:bg-purple-700 focus:ring-4 focus:ring-purple-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center font-semibold"
             >
               <span>Send</span>
-              <svg className="w-5 h-5 ml-2 -mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+              <svg className="w-5 h-5 ml-2 -mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
             </button>
           </form>
         </div>
