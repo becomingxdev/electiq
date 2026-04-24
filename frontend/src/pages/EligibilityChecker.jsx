@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { checkEligibility } from '../api/electiqService';
 
 const INITIAL_FORM = { age: '', citizen: false, hasIdProof: false };
 
 const ErrorAlert = ({ message }) => (
-  <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-start">
-    <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-start" role="alert" aria-live="assertive">
+    <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
     <p className="font-medium">{message}</p>
@@ -15,14 +15,14 @@ const ErrorAlert = ({ message }) => (
 const EligibilityResult = ({ result }) => {
   const isEligible = result.eligible;
   return (
-    <div className={`mt-8 p-6 rounded-2xl border ${isEligible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+    <div className={`mt-8 p-6 rounded-2xl border ${isEligible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`} aria-live="polite">
       <div className="flex items-center mb-3">
         {isEligible ? (
-          <svg className="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         ) : (
-          <svg className="w-8 h-8 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         )}
@@ -39,7 +39,7 @@ const EligibilityResult = ({ result }) => {
 
 const CheckboxRow = ({ id, name, checked, label, onChange }) => (
   <div
-    className="flex items-center space-x-4 p-4 rounded-xl border border-gray-100 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+    className="flex items-center space-x-4 p-4 rounded-xl border border-gray-100 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors focus-within:ring-2 focus-within:ring-blue-500"
     onClick={() => onChange(name)}
   >
     <div className="flex-shrink-0">
@@ -50,10 +50,11 @@ const CheckboxRow = ({ id, name, checked, label, onChange }) => (
         checked={checked}
         onChange={() => onChange(name)}
         onClick={(e) => e.stopPropagation()}
-        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer outline-none"
+        aria-checked={checked}
       />
     </div>
-    <label htmlFor={id} className="text-gray-800 font-medium cursor-pointer flex-grow">
+    <label htmlFor={id} className="text-gray-800 font-medium cursor-pointer flex-grow select-none">
       {label}
     </label>
   </div>
@@ -65,16 +66,17 @@ const EligibilityChecker = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleAgeChange = (e) => {
+  const handleAgeChange = useCallback((e) => {
     setFormData((prev) => ({ ...prev, age: e.target.value }));
-  };
+  }, []);
 
-  const handleCheckboxToggle = (name) => {
+  const handleCheckboxToggle = useCallback((name) => {
     setFormData((prev) => ({ ...prev, [name]: !prev[name] }));
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError('');
     setResult(null);
@@ -86,7 +88,7 @@ const EligibilityChecker = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData, loading]);
 
   return (
     <div className="max-w-2xl mx-auto w-full">
@@ -98,16 +100,19 @@ const EligibilityChecker = () => {
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Age</label>
+            <label htmlFor="age-input" className="block text-sm font-semibold text-gray-700 mb-2">Age</label>
             <input
+              id="age-input"
               type="number"
               name="age"
               value={formData.age}
               onChange={handleAgeChange}
               required
-              min="0"
+              min="1"
+              max="150"
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
-              placeholder="Enter your age"
+              placeholder="e.g. 25"
+              aria-required="true"
             />
           </div>
 
@@ -130,7 +135,8 @@ const EligibilityChecker = () => {
           <button
             type="submit"
             disabled={loading || !formData.age}
-            className="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            className="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-md hover:shadow-lg outline-none"
+            aria-label={loading ? 'Checking eligibility' : 'Check Eligibility'}
           >
             {loading ? 'Checking...' : 'Check Eligibility'}
           </button>

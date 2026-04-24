@@ -12,7 +12,7 @@ export const checkEligibility = async (age, citizen, hasIdProof) => {
 
 // --- Election Timeline API ---
 export const fetchElectionTimeline = async (state) => {
-  const response = await api.get(`/election/timeline?state=${encodeURIComponent(state)}`);
+  const response = await api.get(`/elections/timeline?state=${encodeURIComponent(state)}`);
   return response.data;
 };
 

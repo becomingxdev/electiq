@@ -1,0 +1,24 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Secure rules for ElectIQ
+    match /feedback/{document=**} {
+      // Allow anyone to submit feedback, but no one can read or delete
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+    
+    match /usage_stats/{document=**} {
+      // Allow anonymous incrementing of counts
+      allow create, update: if true;
+      allow read, delete: if false;
+    }
+    
+    match /faqs/{document=**} {
+      // Allow anyone to read public FAQs
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

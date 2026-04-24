@@ -3,7 +3,7 @@ import { fetchElectionTimeline } from '../api/electiqService';
 
 const TimelineCard = ({ accentColor, label, sublabel, value }) => (
   <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-${accentColor}-500 relative overflow-hidden group`}>
-    <div className={`absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-${accentColor}-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500`} />
+    <div className={`absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-${accentColor}-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500`} aria-hidden="true" />
     <h3 className={`text-sm font-bold text-${accentColor}-600 uppercase tracking-wider mb-2`}>{label}</h3>
     <p className="text-gray-500 text-sm mb-1">{sublabel}</p>
     <p className="text-2xl font-bold text-gray-900">{value || 'N/A'}</p>
@@ -42,18 +42,22 @@ const ElectionTimeline = () => {
 
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8">
         <form onSubmit={handleSubmit} className="flex gap-4 flex-col sm:flex-row">
+          <label htmlFor="state-input" className="sr-only">Enter state name</label>
           <input
+            id="state-input"
             type="text"
             value={stateName}
             onChange={(e) => setStateName(e.target.value)}
-            placeholder="Enter state name (e.g., California)"
+            placeholder="e.g. California"
             className="flex-grow px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
             required
+            aria-required="true"
           />
           <button
             type="submit"
             disabled={loading || !stateName.trim()}
-            className="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap shadow-md hover:shadow-lg"
+            className="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap shadow-md hover:shadow-lg outline-none"
+            aria-label={loading ? 'Fetching timeline' : 'View Timeline'}
           >
             {loading ? 'Searching...' : 'View Timeline'}
           </button>
@@ -61,8 +65,8 @@ const ElectionTimeline = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-start mb-8">
-          <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-start mb-8" role="alert" aria-live="assertive">
+          <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="font-medium">{error}</p>
@@ -70,7 +74,7 @@ const ElectionTimeline = () => {
       )}
 
       {timeline && (
-        <div className="space-y-6 animate-fade-in-up">
+        <section className="space-y-6 animate-fade-in-up" aria-live="polite">
           <h2 className="text-2xl font-bold text-gray-800 border-b pb-2">
             Timeline for {timeline.state || stateName}
           </h2>
@@ -79,7 +83,7 @@ const ElectionTimeline = () => {
             <TimelineCard accentColor="green" label="Polling" sublabel="Election Date" value={timeline.pollingDate} />
             <TimelineCard accentColor="purple" label="Results" sublabel="Expected Date" value={timeline.resultDate} />
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

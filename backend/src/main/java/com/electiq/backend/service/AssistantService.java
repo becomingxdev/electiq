@@ -17,6 +17,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Service responsible for handling AI assistant queries.
@@ -37,7 +39,8 @@ public class AssistantService {
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
 
     private static final String SYSTEM_PROMPT =
-            "You are ElectIQ, an election assistant. Answer only election-related questions in clear complete sentences under 60 words. If unrelated, politely refuse. User asked: ";
+            "You're ElectIQ, an election assistant. Answer only election questions in clear sentences under 60 words. " +
+            "If unrelated, refuse. Don't hallucinate dates. If unknown, advise checking official updates. User: ";
 
     private static final int MAX_OUTPUT_TOKENS = 150;
     private static final double TEMPERATURE = 0.2;
@@ -67,25 +70,52 @@ public class AssistantService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+    
+    // Efficiency: Shared maps for rate limiting and response caching
+    private final Map<String, AtomicInteger> rateLimitMap = new ConcurrentHashMap<>();
+    private final Map<String, String> responseCache = new ConcurrentHashMap<>();
+    private long lastCleanup = System.currentTimeMillis();
+
+    public AssistantService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     public AssistantResponse askQuestion(AssistantRequest request) {
+        // Efficiency: Cleanup stale maps every minute
+        cleanMaps();
+        
+        int count = rateLimitMap.computeIfAbsent("global", k -> new AtomicInteger(0)).incrementAndGet();
+        if (count > 30) { 
+            return new AssistantResponse("Too many requests. Please wait a moment.");
+        }
+
         if (request == null || request.getQuestion() == null || request.getQuestion().trim().isEmpty()) {
             return new AssistantResponse("Please provide a question.");
         }
 
+        // Cost Opt: Normalize query (trim/lowercase)
         String query = request.getQuestion().trim().toLowerCase();
+
+        // Speed: Check cache first
+        if (responseCache.containsKey(query)) {
+            return new AssistantResponse(responseCache.get(query));
+        }
 
         if (!isElectionRelated(query)) {
             return new AssistantResponse("I can only assist with election-related topics.");
         }
 
+        // Efficiency: Check static responses before calling LLM
         String staticResponse = getStaticResponse(query);
         if (staticResponse != null) {
+            responseCache.put(query, staticResponse);
             return new AssistantResponse(staticResponse);
         }
 
-        return new AssistantResponse(callGeminiApi(request.getQuestion()));
+        String aiAnswer = callGeminiApi(request.getQuestion().trim());
+        responseCache.put(query, aiAnswer);
+        return new AssistantResponse(aiAnswer);
     }
 
     // -------------------------------------------------------------------------
@@ -205,5 +235,13 @@ public class AssistantService {
         }
         String text = (String) parts.get(0).get("text");
         return text != null ? text.trim() : "AI assistant is temporarily unavailable. Please try again later.";
+    }
+
+    private void cleanMaps() {
+        if (System.currentTimeMillis() - lastCleanup > 60000) {
+            rateLimitMap.clear();
+            responseCache.clear();
+            lastCleanup = System.currentTimeMillis();
+        }
     }
 }
