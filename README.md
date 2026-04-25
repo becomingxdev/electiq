@@ -1,18 +1,10 @@
-<![CDATA[<div align="center">
-
 # ⚡ ElectIQ
 
 ### *AI-Powered Election Assistant*
 
 **Know your vote. Understand your rights. Stay informed.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Firebase-orange?style=for-the-badge&logo=firebase)](https://electiq-devdesai.web.app)
-[![Backend](https://img.shields.io/badge/Backend-Cloud%20Run-blue?style=for-the-badge&logo=google-cloud)](https://electiq-backend-109778663813.asia-south1.run.app/api/v1/health)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-</div>
-
----
 
 ## 🗳️ Chosen Vertical — Civic Tech / Election Literacy
 
