@@ -84,7 +84,7 @@ const EligibilityChecker = () => {
       const data = await checkEligibility(formData.age, formData.citizen, formData.hasIdProof);
       setResult(data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to check eligibility. Please try again.');
+      setError(err.userMessage || 'Failed to check eligibility. Please try again.');
     } finally {
       setLoading(false);
     }

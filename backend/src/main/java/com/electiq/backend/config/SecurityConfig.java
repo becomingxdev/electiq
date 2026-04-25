@@ -1,7 +1,9 @@
 package com.electiq.backend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -11,45 +13,73 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    /**
+     * Comma-separated list of allowed origins.
+     * Set ALLOWED_ORIGINS env var in Cloud Run to override.
+     * Defaults cover local dev + both Firebase Hosting domains.
+     */
+    @Value("${allowed.origins:http://localhost:5173,http://localhost:3000,https://electiq-devdesai.web.app,https://electiq-devdesai.firebaseapp.com}")
+    private String allowedOriginsRaw;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // 1. Disable CSRF — stateless REST API, no session cookies
             .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+            // 2. Enable CORS using the bean defined below
+            .cors(Customizer.withDefaults())
+
+            // 3. Permit all endpoints (public hackathon API)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/health").permitAll()
-                .anyRequest().permitAll()) // Permit all for now, ready for JWT
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Stateless for Cloud Run
-            .headers(headers -> headers.frameOptions(frame -> frame.deny()))
+                .anyRequest().permitAll()
+            )
+
+            // 4. Stateless session (Cloud Run best practice)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+            // 5. Disable form login and HTTP Basic
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable);
+
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        
-        // Strict production origin
-        config.setAllowedOrigins(List.of(
-            "https://electiq-devdesai.web.app",
-            "http://localhost:5173"
-        ));
-        
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setExposedHeaders(List.of("Authorization"));
-        config.setAllowCredentials(true);
-        config.setMaxAge(3600L); // 1 hour
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // Parse comma-separated origins from environment / application.properties
+        List<String> origins = Arrays.stream(allowedOriginsRaw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        configuration.setAllowedOrigins(origins);
+
+        // Allow standard HTTP methods
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+
+        // Allow all headers (Content-Type, Authorization, etc.)
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // Expose common response headers to the browser
+        configuration.setExposedHeaders(List.of("Content-Type", "Authorization"));
+
+        // Credentials support (needed if using cookies/auth headers)
+        configuration.setAllowCredentials(true);
+
+        // Cache preflight response for 1 hour
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }

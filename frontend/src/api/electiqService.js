@@ -12,7 +12,8 @@ export const checkEligibility = async (age, citizen, hasIdProof) => {
 
 // --- Election Timeline API ---
 export const fetchElectionTimeline = async (state) => {
-  const response = await api.get(`/elections/timeline?state=${encodeURIComponent(state)}`);
+  const params = state ? `?state=${encodeURIComponent(state)}` : '';
+  const response = await api.get(`/elections/timeline${params}`);
   return response.data;
 };
 
@@ -20,5 +21,11 @@ export const fetchElectionTimeline = async (state) => {
 export const askAssistant = async (question) => {
   const response = await api.post('/assistant/ask', { question });
   const { data } = response;
-  return data.answer || data.response || (typeof data === 'string' ? data : 'I received a response in an unexpected format.');
+  // Handle all possible response shapes from the backend
+  if (typeof data === 'string') return data;
+  if (data.answer) return data.answer;
+  if (data.response) return data.response;
+  if (data.message) return data.message;
+  return 'I received a response in an unexpected format.';
 };
+

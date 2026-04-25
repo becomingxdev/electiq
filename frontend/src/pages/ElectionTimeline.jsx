@@ -27,7 +27,7 @@ const ElectionTimeline = () => {
       const data = await fetchElectionTimeline(stateName.trim());
       setTimeline(data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch election timeline. Please check the state name and try again.');
+      setError(err.userMessage || 'Failed to fetch election timeline. Please check the state name and try again.');
     } finally {
       setLoading(false);
     }
