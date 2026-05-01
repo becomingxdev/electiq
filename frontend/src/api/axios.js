@@ -13,6 +13,7 @@ const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
+    'x-api-key': import.meta.env.VITE_API_KEY,
   },
   // withCredentials is intentionally omitted:
   // The backend is a stateless REST API that does NOT use cookies or sessions.

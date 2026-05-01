@@ -1,5 +1,6 @@
 package com.electiq.backend.config;
 
+import com.electiq.backend.security.ApiKeyFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -19,6 +21,12 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final ApiKeyFilter apiKeyFilter;
+
+    public SecurityConfig(ApiKeyFilter apiKeyFilter) {
+        this.apiKeyFilter = apiKeyFilter;
+    }
 
     /**
      * Comma-separated list of allowed origins.
@@ -37,15 +45,18 @@ public class SecurityConfig {
             // 2. Enable CORS using the bean defined below
             .cors(Customizer.withDefaults())
 
-            // 3. Permit all endpoints (public hackathon API)
+            // 3. Permit all endpoints (actual authorization is handled by ApiKeyFilter)
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll()
             )
 
-            // 4. Stateless session (Cloud Run best practice)
+            // 4. Add API Key Filter before the standard security filters
+            .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
+
+            // 5. Stateless session (Cloud Run best practice)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // 5. Disable form login and HTTP Basic
+            // 6. Disable form login and HTTP Basic
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable);
 
