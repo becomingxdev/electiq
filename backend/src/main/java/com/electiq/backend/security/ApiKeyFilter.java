@@ -15,20 +15,6 @@ import java.io.IOException;
 
 /**
  * Servlet filter that enforces API key authentication on all non-exempt endpoints.
- *
- * <p>The expected key is read from the {@code API_KEY} environment variable.
- * Requests must supply a matching value in the {@value AppConstants#API_KEY_HEADER} header.
- *
- * <h2>Exemptions</h2>
- * <ul>
- *   <li>{@value AppConstants#HEALTH_PATH} — system liveness probe</li>
- *   <li>{@value AppConstants#ACTUATOR_PATH} — Spring Boot actuator endpoints</li>
- *   <li>{@value AppConstants#SWAGGER_UI_PATH} — interactive API documentation</li>
- *   <li>{@value AppConstants#API_DOCS_PATH} — raw OpenAPI specification</li>
- * </ul>
- *
- * <p>If the {@code API_KEY} variable is not set, <em>all</em> requests are rejected
- * with {@code 401 Unauthorized} to prevent accidental open access in production.
  */
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
@@ -37,10 +23,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
     @Value("${" + AppConstants.ENV_API_KEY + ":}")
     private String configuredApiKey;
-
-    // -------------------------------------------------------------------------
-    // Filter implementation
-    // -------------------------------------------------------------------------
 
     @Override
     protected void doFilterInternal(HttpServletRequest  request,
@@ -56,43 +38,40 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         }
 
         String providedKey = request.getHeader(AppConstants.API_KEY_HEADER);
+        
+        // Task 3: Add debug logs
+        if (providedKey == null) {
+            logger.debug("Received API key: missing");
+        } else {
+            logger.debug("Received API key: present");
+        }
 
         if (!isValidKey(providedKey)) {
-            logger.warn("Unauthorised request blocked — path: {}", path);
+            logger.warn("API key invalid");
             writeUnauthorisedResponse(response);
             return;
         }
 
+        logger.debug("API key valid");
         chain.doFilter(request, response);
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns {@code true} if the path is excluded from API key enforcement.
-     */
     private boolean isExemptPath(String path) {
+        // Task 4: Exclude swagger and docs
         return path.equals(AppConstants.HEALTH_PATH)
                 || path.startsWith(AppConstants.ACTUATOR_PATH)
-                || path.startsWith(AppConstants.SWAGGER_UI_PATH)
-                || path.startsWith(AppConstants.API_DOCS_PATH);
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs");
     }
 
-    /**
-     * Returns {@code true} if the provided key is non-null and matches the configured value.
-     * A missing or blank {@code configuredApiKey} is treated as misconfigured and returns {@code false}.
-     */
     private boolean isValidKey(String providedKey) {
-        return providedKey != null
-                && !configuredApiKey.isBlank()
-                && configuredApiKey.equals(providedKey);
+        // Task 3: Ensure correct comparison (no trimming/case normalization)
+        if (providedKey == null || configuredApiKey == null || configuredApiKey.isBlank()) {
+            return false;
+        }
+        return configuredApiKey.equals(providedKey);
     }
 
-    /**
-     * Writes a structured {@code 401 Unauthorized} JSON body to the response.
-     */
     private void writeUnauthorisedResponse(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");

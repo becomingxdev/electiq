@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+const baseURL = import.meta.env.REACT_APP_API_BASE_URL;
 
 if (!baseURL) {
   console.error(
-    '[ElectIQ] VITE_API_BASE_URL is not set! ' +
-    'Create a .env file with VITE_API_BASE_URL=http://localhost:8080/api/v1 for local dev.'
+    '[ElectIQ] REACT_APP_API_BASE_URL is not set! ' +
+    'Create a .env file with REACT_APP_API_BASE_URL=http://localhost:8080/api/v1 for local dev.'
   );
 }
 
@@ -25,6 +25,7 @@ const api = axios.create({
 // Dev-mode request logging
 if (import.meta.env.DEV) {
   api.interceptors.request.use((config) => {
+    console.log("API KEY:", import.meta.env.VITE_API_KEY);
     console.debug(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, config.data ?? '');
     return config;
   });

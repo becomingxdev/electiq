@@ -41,17 +41,17 @@ public class AssistantControllerTest {
     @SuppressWarnings("null")
     void shouldReturnAnswerForQuestion() throws Exception {
         AssistantRequest request = new AssistantRequest();
-        request.setQuestion("How do I register to vote?");
+        request.setQuery("How do I register to vote?");
 
         AssistantResponse mockResponse = new AssistantResponse("You can register online via the NVSP portal.");
         when(assistantService.askQuestion(any(AssistantRequest.class))).thenReturn(mockResponse);
 
-        mockMvc.perform(post("/assistant/ask")
+        mockMvc.perform(post("/api/v1/assistant/ask")
                 .with(csrf())
                 .header(API_KEY_HEADER, TEST_API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answer").value("You can register online via the NVSP portal."));
+                .andExpect(jsonPath("$.response").value("You can register online via the NVSP portal."));
     }
 }

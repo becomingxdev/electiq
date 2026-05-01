@@ -87,7 +87,7 @@ public class AssistantService {
             return respond(AppConstants.MSG_PROVIDE_QUESTION);
         }
 
-        String query = normalise(request.getQuestion());
+        String query = normalise(request.getQuery());
 
         // 1. Cache-first lookup
         String cached = cacheService.get(query);
@@ -111,7 +111,7 @@ public class AssistantService {
 
         // 4. Vertex AI fallback
         String aiResponse = vertexAIService.generateResponse(
-                AppConstants.SYSTEM_PROMPT + request.getQuestion().trim()
+                AppConstants.SYSTEM_PROMPT + request.getQuery().trim()
         );
         cacheService.set(query, aiResponse);
         return respond(aiResponse);
@@ -126,8 +126,8 @@ public class AssistantService {
      */
     private boolean isBlank(AssistantRequest request) {
         return request == null
-                || request.getQuestion() == null
-                || request.getQuestion().isBlank();
+                || request.getQuery() == null
+                || request.getQuery().isBlank();
     }
 
     /**

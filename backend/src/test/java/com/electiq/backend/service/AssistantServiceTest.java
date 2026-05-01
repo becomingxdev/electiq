@@ -45,13 +45,13 @@ class AssistantServiceTest {
         when(cacheService.get(normalizedQuery)).thenReturn(cachedAnswer);
 
         AssistantRequest request = new AssistantRequest();
-        request.setQuestion(query);
+        request.setQuery(query);
 
         // Act
         AssistantResponse response = assistantService.askQuestion(request);
 
         // Assert
-        assertEquals(cachedAnswer, response.getAnswer());
+        assertEquals(cachedAnswer, response.getResponse());
         verify(cacheService).get(normalizedQuery);
         // Verify no other services were called
         verifyNoInteractions(electionService, vertexAIService);
@@ -68,13 +68,13 @@ class AssistantServiceTest {
             .thenReturn(new ElectionTimelineResponse("Tamil Nadu", "TBA", "2026-04-06", "TBA"));
 
         AssistantRequest request = new AssistantRequest();
-        request.setQuestion(query);
+        request.setQuery(query);
 
         // Act
         AssistantResponse response = assistantService.askQuestion(request);
 
         // Assert
-        assertTrue(response.getAnswer().contains("2026-04-06"));
+        assertTrue(response.getResponse().contains("2026-04-06"));
         verify(electionService).getTimeline("tamil nadu");
         verify(cacheService).set(eq(normalizedQuery), anyString());
     }
@@ -88,13 +88,13 @@ class AssistantServiceTest {
         when(cacheService.get(normalizedQuery)).thenReturn(null);
 
         AssistantRequest request = new AssistantRequest();
-        request.setQuestion(query);
+        request.setQuery(query);
 
         // Act
         AssistantResponse response = assistantService.askQuestion(request);
 
         // Assert
-        assertEquals("I can only assist with election-related topics.", response.getAnswer());
+        assertEquals("I can only assist with election-related topics.", response.getResponse());
         verifyNoInteractions(vertexAIService, electionService);
     }
 
@@ -109,13 +109,13 @@ class AssistantServiceTest {
         when(vertexAIService.generateResponse(anyString())).thenReturn(aiGeneratedResponse);
 
         AssistantRequest request = new AssistantRequest();
-        request.setQuestion(query);
+        request.setQuery(query);
 
         // Act
         AssistantResponse response = assistantService.askQuestion(request);
 
         // Assert
-        assertEquals(aiGeneratedResponse, response.getAnswer());
+        assertEquals(aiGeneratedResponse, response.getResponse());
         verify(vertexAIService).generateResponse(anyString());
         verify(cacheService).set(normalizedQuery, aiGeneratedResponse);
     }

@@ -48,7 +48,7 @@ public class EligibilityControllerTest {
         EligibilityResponse mockResponse = new EligibilityResponse(true, "You are eligible to vote.");
         when(eligibilityService.checkEligibility(any(EligibilityRequest.class))).thenReturn(mockResponse);
 
-        mockMvc.perform(post("/eligibility/check")
+        mockMvc.perform(post("/api/v1/eligibility/check")
                 .with(csrf())
                 .header(API_KEY_HEADER, TEST_API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -69,7 +69,7 @@ public class EligibilityControllerTest {
         EligibilityResponse mockResponse = new EligibilityResponse(false, "You must be at least 18 years old to vote.");
         when(eligibilityService.checkEligibility(any(EligibilityRequest.class))).thenReturn(mockResponse);
 
-        mockMvc.perform(post("/eligibility/check")
+        mockMvc.perform(post("/api/v1/eligibility/check")
                 .with(csrf())
                 .header(API_KEY_HEADER, TEST_API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)

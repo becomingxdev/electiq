@@ -37,7 +37,7 @@ public class ElectionControllerTest {
 
         when(electionService.getTimeline("Andhra Pradesh")).thenReturn(mockResponse);
 
-        mockMvc.perform(get("/elections/timeline")
+        mockMvc.perform(get("/api/v1/elections/timeline")
                 .header(API_KEY_HEADER, TEST_API_KEY)
                 .param("state", "Andhra Pradesh"))
                 .andExpect(status().isOk())

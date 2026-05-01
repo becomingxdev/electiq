@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/elections")
+@RequestMapping("/api/v1/elections")
 public class ElectionController {
 
     private final ElectionService electionService;

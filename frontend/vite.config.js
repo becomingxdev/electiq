@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    envPrefix: ['VITE_', 'REACT_APP_'],
     server: {
       port: 5173,
       proxy: {

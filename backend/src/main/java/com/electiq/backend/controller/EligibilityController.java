@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/eligibility")
+@RequestMapping("/api/v1/eligibility")
 public class EligibilityController {
 
     private final EligibilityService eligibilityService;
