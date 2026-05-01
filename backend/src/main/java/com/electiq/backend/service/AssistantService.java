@@ -1,5 +1,6 @@
 package com.electiq.backend.service;
 
+import com.electiq.backend.cache.CacheService;
 import com.electiq.backend.dto.AssistantRequest;
 import com.electiq.backend.dto.AssistantResponse;
 import com.electiq.backend.dto.ElectionTimelineResponse;
@@ -9,9 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -56,26 +54,15 @@ public class AssistantService {
 
     private final ElectionService electionService;
     private final VertexAIService vertexAIService;
-    
-    // Efficiency: Shared maps for rate limiting and response caching
-    private final Map<String, AtomicInteger> rateLimitMap = new ConcurrentHashMap<>();
-    private final Map<String, String> responseCache = new ConcurrentHashMap<>();
-    private long lastCleanup = System.currentTimeMillis();
+    private final CacheService cacheService;
 
-    public AssistantService(ElectionService electionService, VertexAIService vertexAIService) {
+    public AssistantService(ElectionService electionService, VertexAIService vertexAIService, CacheService cacheService) {
         this.electionService = electionService;
         this.vertexAIService = vertexAIService;
+        this.cacheService = cacheService;
     }
 
     public AssistantResponse askQuestion(AssistantRequest request) {
-        // Efficiency: Cleanup stale maps every minute
-        cleanMaps();
-        
-        int count = rateLimitMap.computeIfAbsent("global", k -> new AtomicInteger(0)).incrementAndGet();
-        if (count > 30) { 
-            return new AssistantResponse("Too many requests. Please wait a moment.");
-        }
-
         if (request == null || request.getQuestion() == null || request.getQuestion().trim().isEmpty()) {
             return new AssistantResponse("Please provide a question.");
         }
@@ -83,10 +70,13 @@ public class AssistantService {
         // Cost Opt: Normalize query (trim/lowercase)
         String query = request.getQuestion().trim().toLowerCase();
 
-        // Speed: Check cache first
-        if (responseCache.containsKey(query)) {
-            return new AssistantResponse(responseCache.get(query));
+        // Speed: Check cache first (Lazy TTL handled by CacheService)
+        String cachedResponse = cacheService.get(query);
+        if (cachedResponse != null) {
+            logger.info("Cache hit for query: {}", query);
+            return new AssistantResponse(cachedResponse);
         }
+        logger.info("Cache miss for query: {}", query);
 
         if (!isElectionRelated(query)) {
             return new AssistantResponse("I can only assist with election-related topics.");
@@ -95,13 +85,13 @@ public class AssistantService {
         // Efficiency: Check static responses before calling LLM
         String staticResponse = getStaticResponse(query);
         if (staticResponse != null) {
-            responseCache.put(query, staticResponse);
+            cacheService.set(query, staticResponse);
             return new AssistantResponse(staticResponse);
         }
 
         // Fallback to Vertex AI for complex queries
         String aiAnswer = vertexAIService.generateResponse(SYSTEM_PROMPT + request.getQuestion().trim());
-        responseCache.put(query, aiAnswer);
+        cacheService.set(query, aiAnswer);
         return new AssistantResponse(aiAnswer);
     }
 
@@ -181,13 +171,5 @@ public class AssistantService {
         return Arrays.stream(str.split("\\s+"))
                 .map(t -> t.substring(0, 1).toUpperCase() + t.substring(1))
                 .collect(Collectors.joining(" "));
-    }
-
-    private void cleanMaps() {
-        if (System.currentTimeMillis() - lastCleanup > 60000) {
-            rateLimitMap.clear();
-            responseCache.clear();
-            lastCleanup = System.currentTimeMillis();
-        }
     }
 }
