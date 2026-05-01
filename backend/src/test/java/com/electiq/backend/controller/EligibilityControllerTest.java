@@ -7,21 +7,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.electiq.backend.config.AppConstants.API_KEY_HEADER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @WithMockUser
 @WebMvcTest(EligibilityController.class)
+@TestPropertySource(properties = "API_KEY=test-key")
 public class EligibilityControllerTest {
+
+    private static final String TEST_API_KEY = "test-key";
 
     @Autowired
     private MockMvc mockMvc;
@@ -43,8 +48,9 @@ public class EligibilityControllerTest {
         EligibilityResponse mockResponse = new EligibilityResponse(true, "You are eligible to vote.");
         when(eligibilityService.checkEligibility(any(EligibilityRequest.class))).thenReturn(mockResponse);
 
-        mockMvc.perform(post("/api/eligibility/check")
+        mockMvc.perform(post("/eligibility/check")
                 .with(csrf())
+                .header(API_KEY_HEADER, TEST_API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -63,8 +69,9 @@ public class EligibilityControllerTest {
         EligibilityResponse mockResponse = new EligibilityResponse(false, "You must be at least 18 years old to vote.");
         when(eligibilityService.checkEligibility(any(EligibilityRequest.class))).thenReturn(mockResponse);
 
-        mockMvc.perform(post("/api/eligibility/check")
+        mockMvc.perform(post("/eligibility/check")
                 .with(csrf())
+                .header(API_KEY_HEADER, TEST_API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

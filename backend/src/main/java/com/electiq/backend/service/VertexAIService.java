@@ -1,59 +1,68 @@
 package com.electiq.backend.service;
 
-import com.google.cloud.vertexai.VertexAI;
+import com.electiq.backend.config.AppConstants;
+import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
 import com.google.cloud.vertexai.generativeai.ResponseHandler;
-import com.google.cloud.vertexai.api.GenerateContentResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Service to interact with Google Cloud Vertex AI using Gemini models.
- * Configurable via environment variables for cross-environment compatibility.
+ * Integrates with Google Cloud Vertex AI (Gemini) to generate election-domain responses.
+ * <p>
+ * This service leverages a singleton {@link GenerativeModel} initialized at startup,
+ * avoiding the high overhead of establishing new gRPC channels per request.
+ * <p>
+ * Authentication is managed via Application Default Credentials (ADC).
  */
 @Service
 public class VertexAIService {
 
     private static final Logger logger = LoggerFactory.getLogger(VertexAIService.class);
 
-    @Value("${GOOGLE_CLOUD_PROJECT:}")
-    private String projectId;
-
-    @Value("${GOOGLE_CLOUD_LOCATION:asia-south1}")
-    private String location;
-
-    private final String modelName = "gemini-2.5-flash";
+    private final GenerativeModel model;
 
     /**
-     * Generates a text response for a given prompt using Gemini 1.5 Flash.
-     * 
-     * @param prompt The user input or system prompt to process.
-     * @return The clean text response from the model, or a fallback message on
-     *         failure.
+     * Initializes the service with a pre-configured generative model.
+     *
+     * @param model the singleton model bean from VertexAIConfig.
+     */
+    public VertexAIService(GenerativeModel model) {
+        this.model = model;
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
+    /**
+     * Sends {@code prompt} to the Gemini model and returns the generated text.
+     *
+     * @param prompt complete prompt string (system context + user query); must not be {@code null}
+     * @return trimmed text response from the model, or a user-safe fallback message on failure
      */
     public String generateResponse(String prompt) {
-        if (projectId == null || projectId.isEmpty()) {
-            logger.error("Vertex AI Error: GOOGLE_CLOUD_PROJECT environment variable is not set.");
-            return "I'm sorry, my AI processing engine is currently unconfigured. Please check the project settings.";
+        if (model == null) {
+            logger.error("Vertex AI model is not initialized. Please check your GOOGLE_CLOUD_PROJECT configuration.");
+            return AppConstants.MSG_AI_UNCONFIGURED;
         }
 
-        try (VertexAI vertexAI = new VertexAI(projectId, location)) {
-            logger.info("Vertex AI initialized successfully for project: {} in {}", projectId, location);
+        try {
+            logger.info("Sending request to Vertex AI singleton model...");
 
-            GenerativeModel model = new GenerativeModel(modelName, vertexAI);
-            
-            logger.info("Sending request to Vertex AI (Model: {})", modelName);
-            GenerateContentResponse response = model.generateContent(prompt);
-            logger.info("Received response from Vertex AI.");
+            GenerateContentResponse resp = model.generateContent(prompt);
 
-            String text = ResponseHandler.getText(response);
-            return text != null ? text.trim() : "I'm sorry, I couldn't generate a response at this time.";
+            String text = ResponseHandler.getText(resp);
+            logger.info("Response received from Vertex AI");
 
-        } catch (Exception e) {
-            logger.error("Vertex AI Generation Failed: {}", e.getMessage());
-            return "I'm having trouble connecting to my enterprise AI engine. Please try again in a moment.";
+            return (text != null && !text.isBlank())
+                    ? text.trim()
+                    : AppConstants.MSG_AI_UNAVAILABLE;
+
+        } catch (Exception ex) {
+            logger.error("Vertex AI request failed: {}", ex.getMessage());
+            return AppConstants.MSG_AI_UNAVAILABLE;
         }
     }
 }
