@@ -2,23 +2,17 @@ package com.electiq.backend.service;
 
 import com.electiq.backend.dto.AssistantRequest;
 import com.electiq.backend.dto.AssistantResponse;
+import com.electiq.backend.dto.ElectionTimelineResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Service responsible for handling AI assistant queries.
@@ -27,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <ol>
  *   <li>Rejects non-election-related questions immediately.</li>
  *   <li>Returns static responses for common queries (registration, timelines, etc.).</li>
- *   <li>Falls back to Gemini API only for complex election questions.</li>
+ *   <li>Falls back to Vertex AI (Gemini) only for complex election questions.</li>
  * </ol>
  */
 @Service
@@ -35,18 +29,11 @@ public class AssistantService {
 
     private static final Logger logger = LoggerFactory.getLogger(AssistantService.class);
 
-    private static final String GEMINI_ENDPOINT =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
-
     private static final String SYSTEM_PROMPT =
             "You're ElectIQ, an election assistant. Answer only election questions in clear sentences under 60 words. " +
             "If unrelated, refuse. Don't hallucinate dates. If unknown, advise checking official updates. User: ";
 
-    private static final int MAX_OUTPUT_TOKENS = 150;
-    private static final double TEMPERATURE = 0.2;
-
-    private static final String TIMELINE_RESPONSE =
-            "Official schedule has not been announced yet. Please check Election Commission updates.";
+    private static final String SOURCE_NOTE = "\n\nSource: Election dataset (based on publicly available schedules and estimates).";
 
     private static final List<String> ELECTION_KEYWORDS = Arrays.asList(
             "vote", "voting", "election", "poll", "ballot", "candidate",
@@ -67,18 +54,17 @@ public class AssistantService {
             "uttar pradesh", "uttarakhand", "west bengal", "delhi", "kashmir", "jammu"
     );
 
-    @Value("${gemini.api.key}")
-    private String geminiApiKey;
-
-    private final RestTemplate restTemplate;
+    private final ElectionService electionService;
+    private final VertexAIService vertexAIService;
     
     // Efficiency: Shared maps for rate limiting and response caching
     private final Map<String, AtomicInteger> rateLimitMap = new ConcurrentHashMap<>();
     private final Map<String, String> responseCache = new ConcurrentHashMap<>();
     private long lastCleanup = System.currentTimeMillis();
 
-    public AssistantService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public AssistantService(ElectionService electionService, VertexAIService vertexAIService) {
+        this.electionService = electionService;
+        this.vertexAIService = vertexAIService;
     }
 
     public AssistantResponse askQuestion(AssistantRequest request) {
@@ -113,7 +99,8 @@ public class AssistantService {
             return new AssistantResponse(staticResponse);
         }
 
-        String aiAnswer = callGeminiApi(request.getQuestion().trim());
+        // Fallback to Vertex AI for complex queries
+        String aiAnswer = vertexAIService.generateResponse(SYSTEM_PROMPT + request.getQuestion().trim());
         responseCache.put(query, aiAnswer);
         return new AssistantResponse(aiAnswer);
     }
@@ -140,7 +127,7 @@ public class AssistantService {
 
     private String getStaticResponse(String query) {
         if (hasTimelineIntent(query)) {
-            return TIMELINE_RESPONSE;
+            return getTimelineResponse(query);
         }
         if (query.contains("register") || query.contains("registration")) {
             return "You can register to vote online through the official Election Commission portal " +
@@ -170,71 +157,30 @@ public class AssistantService {
         return null;
     }
 
-    // -------------------------------------------------------------------------
-    // Gemini API Integration
-    // -------------------------------------------------------------------------
+    private String getTimelineResponse(String query) {
+        String detectedState = INDIAN_STATES.stream()
+                .filter(query::contains)
+                .findFirst()
+                .orElse(null);
 
-    private String callGeminiApi(String query) {
-        if (geminiApiKey == null || geminiApiKey.trim().isEmpty()) {
-            return "I am currently unable to answer complex questions because the API key is not configured.";
+        if (detectedState == null) {
+            return "Official schedule for the upcoming elections has not been fully announced yet. Please specify your state for more details.";
         }
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            Map<String, Object> requestBody = buildGeminiRequestBody(query);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(
-                    GEMINI_ENDPOINT + geminiApiKey, entity, (Class<Map<String, Object>>) (Class<?>) Map.class);
-
-            return extractGeminiText(response.getBody());
-
-        } catch (HttpStatusCodeException e) {
-            logger.error("Gemini API HTTP Error: {} — Response: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            return "AI assistant has reached its capacity or is temporarily unavailable. Please try again later.";
-        } catch (Exception e) {
-            logger.error("Gemini API Error: {}", e.getMessage());
-            return "AI assistant is temporarily unavailable due to a network error. Please try again later.";
-        }
+        ElectionTimelineResponse timeline = electionService.getTimeline(detectedState);
+        String stateName = capitalizeWords(detectedState);
+        
+        return String.format(
+            "The next election in %s is expected around %s.%s",
+            stateName, timeline.getPollingDate(), SOURCE_NOTE
+        );
     }
 
-    private Map<String, Object> buildGeminiRequestBody(String query) {
-        Map<String, Object> part = new HashMap<>();
-        part.put("text", SYSTEM_PROMPT + query);
-
-        Map<String, Object> content = new HashMap<>();
-        content.put("parts", List.of(part));
-
-        Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", MAX_OUTPUT_TOKENS);
-        generationConfig.put("temperature", TEMPERATURE);
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("contents", List.of(content));
-        body.put("generationConfig", generationConfig);
-        return body;
-    }
-
-    @SuppressWarnings("unchecked")
-    private String extractGeminiText(Map<?, ?> responseBody) {
-        if (responseBody == null || !responseBody.containsKey("candidates")) {
-            return "AI assistant is temporarily unavailable. Please try again later.";
-        }
-        List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
-        if (candidates == null || candidates.isEmpty()) {
-            return "AI assistant is temporarily unavailable. Please try again later.";
-        }
-        Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-        if (content == null || !content.containsKey("parts")) {
-            return "AI assistant is temporarily unavailable. Please try again later.";
-        }
-        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-        if (parts == null || parts.isEmpty()) {
-            return "AI assistant is temporarily unavailable. Please try again later.";
-        }
-        String text = (String) parts.get(0).get("text");
-        return text != null ? text.trim() : "AI assistant is temporarily unavailable. Please try again later.";
+    private String capitalizeWords(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return Arrays.stream(str.split("\\s+"))
+                .map(t -> t.substring(0, 1).toUpperCase() + t.substring(1))
+                .collect(Collectors.joining(" "));
     }
 
     private void cleanMaps() {
