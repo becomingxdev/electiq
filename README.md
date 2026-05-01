@@ -1,176 +1,185 @@
+<div align="center">
+
 # ⚡ ElectIQ
 
-### *AI-Powered Election Assistant*
+### *Empowering Democracy Through AI-Driven Civic Literacy*
 
-**Know your vote. Understand your rights. Stay informed.**
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-brightgreen?style=flat-square&logo=spring)](https://spring.io/projects/spring-boot)
+[![Vertex AI](https://img.shields.io/badge/Vertex%20AI-Gemini%202.5%20Flash-blue?style=flat-square&logo=google-cloud)](https://cloud.google.com/vertex-ai)
+[![Cloud Run](https://img.shields.io/badge/Cloud%20Run-asia--south1-blue?style=flat-square&logo=google-cloud)](https://cloud.google.com/run)
+[![Java 17](https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=openjdk)](https://openjdk.org/)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-green?style=flat-square&logo=swagger)](http://localhost:8080/swagger-ui/index.html)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
+> An AI-powered assistant that demystifies the election process — from voter registration to result day — in a conversational, citizen-first experience.
 
-
-## 🗳️ Chosen Vertical — Civic Tech / Election Literacy
-
-India has one of the world's largest democratic electorates — over 960 million registered voters — yet voter awareness and participation remain uneven. First-time voters often don't know if they're eligible, when registration closes, or how to cast a ballot correctly.
-
-**ElectIQ** sits at the intersection of AI and civic technology. The goal is simple: remove every friction point that stands between a citizen and their vote, through a conversational, accessible interface that works on any device.
+</div>
 
 ---
 
-## 🧠 Approach & Logic
+## 🗳️ Chosen Vertical: Election Process Education (Civic Tech)
 
-### The Problem
-Election information in India is scattered across multiple government portals, PDFs, and local notices — often in formal language that intimidates first-time voters. Key pain points:
+**ElectIQ** targets the **Election Process Education** vertical.
 
-| Pain Point | Reality |
-|---|---|
-| Eligibility confusion | Citizens unsure if age, citizenship, or ID requirements apply to them |
-| Date fragmentation | Registration deadlines, polling dates, and result dates live on different pages |
-| No conversational interface | Official sites are form-heavy, not question-friendly |
-| AI hallucination risk | General-purpose LLMs confidently fabricate specific election dates |
+Across India's massive electorate, a "participation barrier" quietly silences millions of eligible voters:
 
-### The Solution Philosophy
+| Challenge | Real-World Impact |
+|-----------|-------------------|
+| 📅 Missed registration deadlines | Citizens find out too late; miss election rolls |
+| 📄 Process confusion | Voters unsure of valid ID types or polling booth rules |
+| 🏛️ Portal fragmentation | Critical information buried across 15+ government websites |
+| 🌐 Language & literacy gaps | Complex electoral language inaccessible to first-time voters |
 
-ElectIQ uses a **tiered response strategy** designed to be fast, accurate, and cost-efficient:
+**ElectIQ solves this** by creating a single, conversational interface that answers the questions every citizen deserves to have answered — accurately, instantly, and without jargon.
+
+---
+
+## 🧠 Approach & Logic: "Deterministic-First, Generative-Second"
+
+The biggest risk in building an electoral assistant is **AI hallucination on critical facts** — wrong polling dates or incorrect eligibility rules can suppress voter participation. ElectIQ's core design philosophy directly addresses this.
+
+### The Architecture Principle
+
+> *"Use generative AI to explain; use authoritative data to inform."*
+
+ElectIQ never lets Gemini guess a date. Factual lookups always route to structured, curated datasets. The AI handles only natural language — nuance, explanation, and conversation.
+
+### The Request Lifecycle
 
 ```
-User Question
-     │
-     ▼
-┌─────────────────────────────────────────────┐
-│  1. GUARD — Is this election-related?        │
-│     → No  → Politely refuse                 │
-│     → Yes → continue ↓                      │
-└─────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────┐
-│  2. CACHE — Was this already answered?       │
-│     → Yes → Return instantly (free)         │
-│     → No  → continue ↓                      │
-└─────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────┐
-│  3. STATIC ROUTER — Known pattern match?     │
-│     registration / voter ID / NOTA / booth   │
-│     → Yes → Hardcoded authoritative answer   │
-│     → No  → continue ↓                      │
-└─────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────┐
-│  4. GEMINI — Complex or novel question       │
-│     → gemini-2.5-flash with a strict system  │
-│        prompt (≤60 words, no date guessing)  │
-└─────────────────────────────────────────────┘
+User Query
+    │
+    ▼
+┌─────────────────────────────────────┐
+│         1. Security Gate            │  ← API Key Filter (fail-closed)
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│         2. Input Validation         │  ← Blank/null guard + sanitization
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│         3. Domain Guard             │  ← Is this election-related?
+│            Off-topic → REJECT        │    (Saves LLM calls + costs)
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│         4. L1 Cache Lookup          │  ← In-Memory (ConcurrentHashMap + TTL)
+│            HIT → Return instantly   │    Sub-millisecond response
+└─────────────────────────────────────┘
+    │ MISS
+    ▼
+┌─────────────────────────────────────┐
+│         5. Static Intent Router     │  ← Deterministic routing for known patterns:
+│                                     │    • "when is election in [state]?" → elections.json
+│                                     │    • "what is NOTA?" → pre-authored response
+│                                     │    • "voter registration?" → step-by-step guide
+└─────────────────────────────────────┘
+    │ UNMATCHED
+    ▼
+┌─────────────────────────────────────┐
+│      6. Google Vertex AI (Gemini)   │  ← Singleton gRPC client (initialized once)
+│         Gemini 2.5 Flash            │    Strict system prompt: no date hallucination
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│         7. Cache Write              │  ← Store result for 5 min TTL
+└─────────────────────────────────────┘
+    │
+    ▼
+Response → User
 ```
-
-This architecture means **~80% of queries never reach Gemini**, reducing latency and API cost while eliminating the most common source of hallucination (fabricated election dates).
 
 ---
 
 ## 🏗️ How the Solution Works
 
-### System Architecture
+### 1. Backend Engine (Spring Boot 3.4.5)
+
+Built on **Clean Architecture** — every layer has exactly one responsibility:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER BROWSER                            │
-│                                                                 │
-│   React 19 + Vite + Tailwind CSS + React Router v7              │
-│   ┌────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
-│   │ Eligibility│  │  Election    │  │    AI Assistant      │   │
-│   │  Checker   │  │  Timeline    │  │   (Chat Interface)   │   │
-│   └────────────┘  └──────────────┘  └──────────────────────┘   │
-│            │              │                    │                │
-│            └──────────────┼────────────────────┘                │
-│                     Axios + Interceptors                         │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │ HTTPS REST  (prod)
-                              │ Vite Proxy  (local dev)
-┌─────────────────────────────▼───────────────────────────────────┐
-│               GOOGLE CLOUD RUN  (asia-south1)                   │
-│                                                                 │
-│   Spring Boot 3.4 · Java 17 · Context Path: /api/v1            │
-│                                                                 │
-│   POST /eligibility/check    →  EligibilityService              │
-│   GET  /elections/timeline   →  ElectionService                 │
-│   POST /assistant/ask        →  AssistantService                │
-│   GET  /health               →  HealthController                │
-│                                                                 │
-│   Spring Security  │  CORS Config  │  Global Exception Handler  │
-└────────────┬────────────────────────────────────────────────────┘
-             │
-             ▼ Only for complex questions
-┌────────────────────────────┐    ┌──────────────────────────┐
-│  Google Gemini 2.5 Flash   │    │  Firebase Firestore       │
-│  (generativelanguage API)  │    │  · feedback collection   │
-│  Low-temp, capped tokens   │    │  · usage_stats counters  │
-└────────────────────────────┘    └──────────────────────────┘
+Controller → Service → Cache → Vertex AI
 ```
 
-### Frontend (React + Vite)
+*   **`AssistantController`**: Accepts user queries via `POST /assistant/ask`, delegates everything to the service layer. Zero business logic.
+*   **`AssistantService`**: Orchestrates intent detection, static routing, cache interaction, and AI delegation. All magic strings live in `AppConstants` — no inline literals.
+*   **`ElectionService`**: Loads `elections.json` at startup into an `unmodifiableMap`. Thread-safe, zero I/O on subsequent calls.
+*   **`EligibilityService`**: Pure Java logic for determining voter eligibility (age ≥ 18, citizenship, ID proof).
+*   **`VertexAIService`**: Delegates to a pre-warmed singleton `GenerativeModel` bean — never creates a new connection per request.
 
-| File | Purpose |
-|---|---|
-| `src/pages/Dashboard.jsx` | Landing page with three feature cards |
-| `src/pages/EligibilityChecker.jsx` | Form-driven eligibility check with instant feedback |
-| `src/pages/ElectionTimeline.jsx` | State-based timeline lookup showing registration, polling, and result dates |
-| `src/pages/AIAssistant.jsx` | Full chat interface with message history, typing indicator, and per-message feedback |
-| `src/api/axios.js` | Axios instance with timeout, dev-mode logging, and normalized error interceptor |
-| `src/api/electiqService.js` | Typed wrappers for all three backend API calls |
-| `src/firebase.js` | Firestore client for feedback and usage analytics |
+### 2. AI Integration (Google Vertex AI)
 
-**Local dev proxy:** Vite proxies all `/api/v1/*` requests to `localhost:8080`, eliminating CORS issues entirely during development. In production builds, Axios calls the Cloud Run URL directly.
+| Property | Value |
+|----------|-------|
+| **SDK** | `google-cloud-vertexai` (official Java SDK) |
+| **Model** | `gemini-2.5-flash` |
+| **Client** | Singleton bean — gRPC channels reused across all requests |
+| **Auth** | Application Default Credentials (ADC) — no hardcoded keys |
+| **Region** | `asia-south1` (Mumbai) — lowest latency for Indian users |
 
-### Backend (Spring Boot)
+**The System Prompt is deliberately strict:**
+> *"You're ElectIQ, an election assistant. Answer only election questions in clear sentences under 60 words. If unrelated, refuse. Don't hallucinate dates. If unknown, advise checking official updates."*
 
-| Layer | Technology |
-|---|---|
-| Framework | Spring Boot 3.4.5 |
-| Language | Java 17 |
-| Security | Spring Security (CSRF disabled, stateless, CORS via env-configurable origin list) |
-| Validation | Jakarta Validation (`@Valid`, `@Min`, `@Max`) |
-| HTTP Client | `RestTemplate` with 5s connect / 10s read timeout |
-| Boilerplate | Lombok |
-| Deployment | Docker → Google Cloud Run |
+### 3. Caching Layer
 
-#### API Endpoints
+| Cache Type | Implementation | TTL | Scope |
+|------------|----------------|-----|-------|
+| **In-Memory** | `ConcurrentHashMap` with lazy expiry | 5 minutes | Single instance |
+| **Redis-Ready** | `RedisCacheService` abstraction | N/A | Distributed (production) |
 
-```
-POST /api/v1/eligibility/check
-  Body: { age: int, citizen: bool, hasIdProof: bool }
-  Returns: { eligible: bool, message: string }
+The active cache is selected at startup via `CACHE_TYPE=memory|redis` environment variable. Defaults to `memory`.
 
-GET /api/v1/elections/timeline?state=<name>
-  Returns: { state, registrationDeadline, pollingDate, resultDate }
+### 4. Security Model
 
-POST /api/v1/assistant/ask
-  Body: { question: string }
-  Returns: { answer: string }
+*   **API Key Filter**: All endpoints (except `/health`, `/swagger-ui`, `/v3/api-docs`) require a valid `x-api-key` header.
+*   **Fail-Closed by Default**: If the `API_KEY` environment variable is not set, *every* request is rejected with `401 Unauthorized`.
+*   **Input Sanitization**: Jakarta Bean Validation (`@NotBlank`) is applied at the controller layer before any processing begins.
+*   **No Secrets in Code**: All credentials injected via environment variables. Designed for GCP Secret Manager integration.
 
-GET /api/v1/health
-  Returns: "ElectIQ Backend Running"
-```
+### 5. API Documentation (OpenAPI 3.0)
 
-#### AI Assistant — Smart Routing Detail
+A fully interactive **Swagger UI** is available at `/swagger-ui/index.html`:
+*   Authenticate once with your `x-api-key`.
+*   Test all 3 endpoints live from the browser.
+*   Inspect request/response schemas.
 
-The `AssistantService` applies keyword matching before any API call:
+---
 
-- **Election keyword filter:** `vote`, `election`, `ballot`, `candidate`, `democracy`, `mla`, `mp`, `nota`, `parliament` and more
-- **Timeline trigger patterns:** "next election", "election date", "when is election", plus `[state name] + election`
-- **Static responses cover:** Voter registration, how to vote (EVM), voter ID alternatives, polling booth lookup, NOTA explanation, types of elections
-- **Gemini system prompt:** Caps output at 150 tokens, temperature 0.2, instructs the model never to guess election dates
-- **Rate limiting:** In-memory counter resets every 60 seconds (30 req/min global cap)
-- **Response cache:** In-memory `ConcurrentHashMap` — same normalized query never hits Gemini twice within the minute window
+## 📋 Assumptions Made
 
-### Firebase Firestore
+1.  **Indian Electoral Context**: The application is calibrated for India — voter eligibility is defined as Age ≥ 18 + Citizenship. State names match the Indian political map.
 
-Used for lightweight, write-only analytics — no auth required:
+2.  **`elections.json` as Ground Truth**: State-wise election timelines are stored in a curated JSON file and treated as authoritative. This prevents the AI from hallucinating dates and ensures deterministic, reproducible answers.
 
-| Collection | Purpose | Rules |
-|---|---|---|
-| `feedback` | Stores thumbs-up/down on assistant replies | Write-only (no read/delete) |
-| `usage_stats` | Atomic counter of total assistant queries | Increment-only |
-| `faqs` | Reserved for future public FAQ storage | Read-only |
+3.  **HTTPS in Production**: The `x-api-key` header is sensitive. The application assumes it is served over HTTPS in any environment beyond local development.
+
+4.  **GCP Runtime Variables**: `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` are expected to be set as environment variables. This is standard for all Cloud Run deployments using ADC.
+
+5.  **Single-Instance Caching for Prototype**: The `InMemoryCacheService` is appropriate for a single Cloud Run instance. For multi-instance production deployments, the `RedisCacheService` abstraction should be promoted to a full Google Cloud Memorystore implementation.
+
+6.  **English Language Queries**: The current build assumes English-language input. Multilingual support (Hindi, Tamil, etc.) is architecturally possible with minor prompt modifications.
+
+---
+
+## 🧰 Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Framework** | Spring Boot 3.4.5 (Java 17) | Core application server |
+| **AI SDK** | Google Cloud Vertex AI | Gemini 2.5 Flash integration |
+| **Security** | Spring Security + `ApiKeyFilter` | Stateless API key auth |
+| **Documentation** | SpringDoc OpenAPI (Swagger UI) | Interactive API explorer |
+| **Caching** | `ConcurrentHashMap` + Redis Abstraction | Tiered response caching |
+| **Testing** | JUnit 5 + Mockito + Spring WebMvcTest | Unit + slice testing |
+| **Build** | Maven Wrapper (`mvnw`) | Reproducible builds |
+| **Deployment** | Google Cloud Run | Serverless container hosting |
+| **Logging** | SLF4J + Logback | Structured observability |
+| **Config** | `spring-dotenv` + Environment Variables | Externalized configuration |
 
 ---
 
@@ -178,189 +187,106 @@ Used for lightweight, write-only analytics — no auth required:
 
 ### Prerequisites
 
-| Tool | Version |
-|---|---|
-| Java | 17 |
-| Maven | 3.9+ (or use `./mvnw`) |
-| Node.js | 18+ |
-| npm | 9+ |
+*   Java 17+
+*   Maven 3.9+ (or use the included `mvnw` wrapper)
+*   A Google Cloud project with Vertex AI API enabled
+*   Application Default Credentials configured (`gcloud auth application-default login`)
 
-### Run Locally
+### 1. Clone & Configure
 
-**1. Clone the repository**
 ```bash
-git clone https://github.com/becomingxdev/electiq.git
+git clone https://github.com/your-username/electiq.git
 cd electiq
 ```
 
-**2. Start the backend**
+Create a `.env` file in the `backend/` directory:
+
+```env
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+GOOGLE_CLOUD_LOCATION=asia-south1
+API_KEY=your-secure-api-key
+CACHE_TYPE=memory
+```
+
+### 2. Run the Backend
+
 ```bash
 cd backend
-
-# Create backend/.env with your Gemini key
-echo "GEMINI_API_KEY=your_key_here" > .env
-
 ./mvnw spring-boot:run
-# → Listening on http://localhost:8080
-# → API base: http://localhost:8080/api/v1
 ```
 
-**3. Start the frontend**
-```bash
-cd frontend
-npm install
-npm run dev
-# → App at http://localhost:5173
-# → API calls proxied to http://localhost:8080/api/v1
-```
+The API is now live at `http://localhost:8080/api/v1`
 
-> No CORS configuration needed for local development — Vite's dev proxy handles it transparently.
+### 3. Explore the API
 
-### Environment Variables
+Open **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
 
-#### Frontend (`frontend/.env`)
-```env
-# Local dev — Vite proxies this path to VITE_PROXY_TARGET
-VITE_API_BASE_URL=/api/v1
-VITE_PROXY_TARGET=http://localhost:8080
-```
+Click **Authorize** and enter your `API_KEY` value. You can now test all endpoints interactively.
 
-#### Frontend (`frontend/.env.production`)
-```env
-# Production — full Cloud Run URL (used by vite build automatically)
-VITE_API_BASE_URL=https://<your-cloudrun-service>.run.app/api/v1
-```
-
-#### Backend (Cloud Run environment variables)
-```env
-GEMINI_API_KEY=your_gemini_api_key
-ALLOWED_ORIGINS=https://your-app.web.app,https://your-app.firebaseapp.com
-```
-
----
-
-## ☁️ Deployment
-
-### Frontend → Firebase Hosting
+### 4. Run Tests
 
 ```bash
-cd frontend
-npm run build              # Picks up .env.production automatically
-firebase deploy --only hosting
+./mvnw test
 ```
 
-### Backend → Google Cloud Run
-
-```bash
-cd backend
-
-# Build and push the Docker image
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/electiq-backend
-
-# Deploy to Cloud Run
-gcloud run deploy electiq-backend \
-  --image gcr.io/YOUR_PROJECT_ID/electiq-backend \
-  --region asia-south1 \
-  --platform managed \
-  --allow-unauthenticated \
-  --set-env-vars "GEMINI_API_KEY=your_key,ALLOWED_ORIGINS=https://your-app.web.app"
-```
+All **13 tests** should pass.
 
 ---
 
-## 📋 Assumptions Made
+## 📡 API Endpoints
 
-1. **Indian electoral context only.** The eligibility logic (age 18+, citizenship, ID proof) and the AI system prompt are calibrated for Indian elections. The static keyword list includes Indian-specific terms (`mla`, `mp`, `nota`, `panchayat`).
+All endpoints are prefixed with `/api/v1` and require `x-api-key` header.
 
-2. **Election timeline data is mocked.** The `ElectionService` returns placeholder dates (`2026-09-01` for registration, `2026-09-20` for polling, `2026-09-25` for results) for any state. Integrating with the ECI's live data feed is a natural next step.
+### `POST /assistant/ask`
+The core AI conversation endpoint.
 
-3. **Stateless API — no authentication.** This is a public-facing informational tool with no user accounts or protected resources. All API endpoints are open.
+```json
+// Request
+{ "question": "How do I register to vote in Maharashtra?" }
 
-4. **Rate limiting is in-memory and per-instance.** The 30 req/min cap resets every 60 seconds and is not distributed across Cloud Run instances. Under high load, each instance enforces its own limit independently.
-
-5. **Feedback is anonymous.** Firestore feedback documents are write-only with no IP tracking or user identification — by design.
-
-6. **Gemini API key is required for complex queries only.** The system degrades gracefully: static responses still work without a valid key; only novel questions fall back to a "temporarily unavailable" message.
-
-7. **Response caching is ephemeral.** The in-memory `ConcurrentHashMap` cache clears every 60 seconds and does not survive instance restarts. A Redis cache would be the production upgrade path.
-
----
-
-## 🧰 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend Framework | React 19 |
-| Build Tool | Vite 8 |
-| Styling | Tailwind CSS 3 |
-| Routing | React Router v7 |
-| HTTP Client | Axios 1.x |
-| Backend Framework | Spring Boot 3.4.5 |
-| Backend Language | Java 17 |
-| AI Provider | Google Gemini 2.5 Flash |
-| Frontend Hosting | Firebase Hosting |
-| Backend Hosting | Google Cloud Run (asia-south1) |
-| Database | Firebase Firestore (analytics only) |
-| Containerization | Docker (multi-stage, Alpine JRE) |
-
----
-
-## 📁 Project Structure
-
+// Response
+{ "answer": "Visit nvsp.in or your local BLO office. Submit Form 6 with address proof and a passport-size photo before the nomination deadline." }
 ```
-electiq/
-├── backend/
-│   ├── src/main/java/com/electiq/backend/
-│   │   ├── config/         # SecurityConfig (CORS), RestTemplateConfig
-│   │   ├── controller/     # EligibilityController, ElectionController,
-│   │   │                   # AssistantController, HealthController
-│   │   ├── dto/            # Request/Response POJOs
-│   │   ├── exception/      # GlobalExceptionHandler
-│   │   └── service/        # Business logic + Gemini integration
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── frontend/
-│   ├── src/
-│   │   ├── api/            # axios.js (interceptors), electiqService.js
-│   │   ├── pages/          # Dashboard, EligibilityChecker,
-│   │   │                   # ElectionTimeline, AIAssistant
-│   │   ├── firebase.js     # Firestore client
-│   │   └── App.jsx         # Router + layout shell
-│   ├── .env                # Local dev config
-│   ├── .env.production     # Production config (Cloud Run URL)
-│   └── vite.config.js      # Includes dev proxy for /api/v1
-│
-├── firebase.json           # Hosting + Firestore config
-├── firestore.rules         # Write-only feedback & stats rules
-└── README.md
+
+### `GET /elections/timeline?state=Maharashtra`
+Deterministic, AI-free lookup from the elections dataset.
+
+```json
+{ "state": "Maharashtra", "timeline": "Elections scheduled for November 2024." }
+```
+
+### `POST /eligibility/check`
+Rule-based eligibility determination.
+
+```json
+// Request
+{ "age": 25, "citizen": true, "hasIdProof": true }
+
+// Response
+{ "eligible": true, "message": "You are eligible to vote." }
 ```
 
 ---
 
-## 🔮 Future Roadmap
+## 🔮 Future Roadmap: ElectIQ 2.0
 
-- [ ] **Live ECI data integration** — Fetch real election schedules from the Election Commission of India's public API
-- [ ] **Multi-language support** — Hindi, Tamil, Bengali, and other regional languages
-- [ ] **Constituency lookup** — Enter PIN code to find your booth and representative
-- [ ] **Push notifications** — Remind users of upcoming registration deadlines
-- [ ] **Distributed caching** — Redis on Cloud Memorystore for shared response cache across Cloud Run instances
-- [ ] **Admin dashboard** — View aggregated usage stats and feedback from Firestore
-
----
-
-## 👤 Author
-
-Built for **PromptWars Hackathon — Challenge 2**  
-by [@becomingxdev](https://github.com/becomingxdev)
+- [ ] **Live ECI Grounding**: Vertex AI Function Calling to query real-time Election Commission of India APIs
+- [ ] **Multi-Modal Support**: Upload a Voter ID photo to verify registration via Gemini Vision
+- [ ] **Multilingual**: Hindi, Tamil, Telugu, and Bengali support for broader citizen reach
+- [ ] **Hyper-Local Awareness**: Constituency and polling booth lookup via PIN code
+- [ ] **Cloud Memorystore**: Promote the Redis abstraction to a full GCP Memorystore deployment
+- [ ] **Rate Limiting**: Bucket4j integration to protect LLM cost budgets per key
 
 ---
 
 <div align="center">
 
-*"Democracy is not a spectator sport."*
+---
 
-**[🌐 Try it live →](https://electiq-devdesai.web.app)**
+**ElectIQ — Empowering every vote, one conversation at a time.**
+
+Built for **PromptWars Challenge 2** · Vertical: Election Process Education
+
+*Optimized for Production. Hardened for Security. Designed for Citizens.*
 
 </div>
-]]>
