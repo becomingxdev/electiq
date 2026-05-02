@@ -1,70 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { checkEligibility } from '../api/electiqService';
+import CheckboxRow from '../components/CheckboxRow';
+import ErrorAlert from '../components/ErrorAlert';
+import EligibilityResult from '../components/EligibilityResult';
 
 const INITIAL_FORM = { age: '', citizen: false, hasIdProof: false };
 
-const ErrorAlert = ({ message }) => (
-  <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-start" role="alert" aria-live="assertive">
-    <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-    <p className="font-medium">{message}</p>
-  </div>
-);
-
-const EligibilityResult = ({ result }) => {
-  const isEligible = result.eligible;
-  return (
-    <div className={`mt-8 p-6 rounded-2xl border ${isEligible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`} aria-live="polite">
-      <div className="flex items-center mb-3">
-        {isEligible ? (
-          <svg className="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ) : (
-          <svg className="w-8 h-8 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )}
-        <h3 className={`text-2xl font-bold ${isEligible ? 'text-green-800' : 'text-red-800'}`}>
-          {isEligible ? 'Eligible to Vote' : 'Not Eligible'}
-        </h3>
-      </div>
-      <p className={`text-lg ml-11 ${isEligible ? 'text-green-700' : 'text-red-700'}`}>
-        {result.message || (isEligible ? 'You meet all the requirements.' : 'Based on the details provided.')}
-      </p>
-    </div>
-  );
-};
-
-const CheckboxRow = ({ id, name, checked, label, onChange }) => (
-  <div
-    className="flex items-center space-x-4 p-4 rounded-xl border border-gray-100 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors focus-within:ring-2 focus-within:ring-blue-500"
-    onClick={() => onChange(name)}
-  >
-    <div className="flex-shrink-0">
-      <input
-        type="checkbox"
-        id={id}
-        name={name}
-        checked={checked}
-        onChange={() => onChange(name)}
-        onClick={(e) => e.stopPropagation()}
-        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer outline-none"
-        aria-checked={checked}
-      />
-    </div>
-    <label htmlFor={id} className="text-gray-800 font-medium cursor-pointer flex-grow select-none">
-      {label}
-    </label>
-  </div>
-);
-
 const EligibilityChecker = () => {
   const [formData, setFormData] = useState(INITIAL_FORM);
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [result, setResult]     = useState(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
 
   const handleAgeChange = useCallback((e) => {
     setFormData((prev) => ({ ...prev, age: e.target.value }));
@@ -142,7 +88,7 @@ const EligibilityChecker = () => {
           </button>
         </form>
 
-        {error && <ErrorAlert message={error} />}
+        {error  && <ErrorAlert message={error} />}
         {result && <EligibilityResult result={result} />}
       </div>
     </div>

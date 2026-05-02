@@ -38,8 +38,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         }
 
         String providedKey = request.getHeader(AppConstants.API_KEY_HEADER);
-        
-        // Task 3: Add debug logs
+
         if (providedKey == null) {
             logger.debug("Received API key: missing");
         } else {
@@ -57,15 +56,13 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     }
 
     private boolean isExemptPath(String path) {
-        // Task 4: Exclude swagger and docs
         return path.equals(AppConstants.HEALTH_PATH)
                 || path.startsWith(AppConstants.ACTUATOR_PATH)
-                || path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs");
+                || path.startsWith(AppConstants.SWAGGER_UI_PATH)
+                || path.startsWith(AppConstants.API_DOCS_PATH);
     }
 
     private boolean isValidKey(String providedKey) {
-        // Task 3: Ensure correct comparison (no trimming/case normalization)
         if (providedKey == null || configuredApiKey == null || configuredApiKey.isBlank()) {
             return false;
         }

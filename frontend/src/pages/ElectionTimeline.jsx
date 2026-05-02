@@ -1,20 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { fetchElectionTimeline } from '../api/electiqService';
-
-const TimelineCard = ({ accentColor, label, sublabel, value }) => (
-  <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-${accentColor}-500 relative overflow-hidden group`}>
-    <div className={`absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-${accentColor}-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500`} aria-hidden="true" />
-    <h3 className={`text-sm font-bold text-${accentColor}-600 uppercase tracking-wider mb-2`}>{label}</h3>
-    <p className="text-gray-500 text-sm mb-1">{sublabel}</p>
-    <p className="text-2xl font-bold text-gray-900">{value || 'N/A'}</p>
-  </div>
-);
+import TimelineCard from '../components/TimelineCard';
+import { AlertCircleIcon } from '../components/icons';
 
 const ElectionTimeline = () => {
   const [stateName, setStateName] = useState('');
-  const [timeline, setTimeline] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [timeline, setTimeline]   = useState(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,9 +59,7 @@ const ElectionTimeline = () => {
 
       {error && (
         <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-start mb-8" role="alert" aria-live="assertive">
-          <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <AlertCircleIcon />
           <p className="font-medium">{error}</p>
         </div>
       )}
@@ -79,9 +70,9 @@ const ElectionTimeline = () => {
             Timeline for {timeline.state || stateName}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <TimelineCard accentColor="blue" label="Registration" sublabel="Deadline" value={timeline.registrationDeadline} />
-            <TimelineCard accentColor="green" label="Polling" sublabel="Election Date" value={timeline.pollingDate} />
-            <TimelineCard accentColor="purple" label="Results" sublabel="Expected Date" value={timeline.resultDate} />
+            <TimelineCard accentColor="blue"   label="Registration" sublabel="Deadline"      value={timeline.registrationDeadline} />
+            <TimelineCard accentColor="green"  label="Polling"      sublabel="Election Date" value={timeline.pollingDate} />
+            <TimelineCard accentColor="purple" label="Results"      sublabel="Expected Date" value={timeline.resultDate} />
           </div>
         </section>
       )}

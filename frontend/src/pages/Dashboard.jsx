@@ -1,5 +1,4 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import FeatureCard from '../components/FeatureCard';
 
 const FEATURE_CARDS = [
   {
@@ -8,7 +7,7 @@ const FEATURE_CARDS = [
     title: 'Eligibility Checker',
     description: 'Find out if you meet the requirements to vote in your area quickly and easily.',
     icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
@@ -19,7 +18,7 @@ const FEATURE_CARDS = [
     title: 'Election Timeline',
     description: 'Stay up to date with important election dates, registration deadlines, and polling days.',
     icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
     ),
@@ -30,25 +29,12 @@ const FEATURE_CARDS = [
     title: 'AI Assistant',
     description: 'Ask any questions about the voting process, candidates, or laws and get instant answers.',
     icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
       </svg>
     ),
   },
 ];
-
-const FeatureCard = ({ to, color, title, description, icon }) => (
-  <Link
-    to={to}
-    className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-8 flex flex-col items-center text-center group border border-gray-100 hover:-translate-y-1"
-  >
-    <div className={`w-16 h-16 bg-${color}-50 text-${color}-600 rounded-full flex items-center justify-center mb-6 group-hover:bg-${color}-600 group-hover:text-white transition-colors duration-300`}>
-      {icon}
-    </div>
-    <h2 className="text-xl font-bold mb-3 text-gray-900">{title}</h2>
-    <p className="text-gray-500 leading-relaxed">{description}</p>
-  </Link>
-);
 
 const Dashboard = () => (
   <div className="flex flex-col items-center justify-center space-y-16 py-12">

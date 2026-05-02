@@ -80,6 +80,22 @@ public final class AppConstants {
             "Unauthorized: Invalid API key";
 
     // -------------------------------------------------------------------------
+    // Eligibility messages
+    // -------------------------------------------------------------------------
+
+    public static final String MSG_NOT_A_CITIZEN =
+            "You must be a citizen to register and vote.";
+
+    public static final String MSG_UNDER_AGE =
+            "You must be at least 18 years old to register and vote.";
+
+    public static final String MSG_ELIGIBLE_NO_ID =
+            "You are eligible to register and vote, but registration may require valid ID documents.";
+
+    public static final String MSG_ELIGIBLE =
+            "You are eligible to register and vote.";
+
+    // -------------------------------------------------------------------------
     // Data source
     // -------------------------------------------------------------------------
 

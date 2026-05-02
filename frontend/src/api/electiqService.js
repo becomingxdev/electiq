@@ -19,15 +19,6 @@ export const fetchElectionTimeline = async (state) => {
 
 // --- AI Assistant API ---
 export const askAssistant = async (question) => {
-  // Task 5: Use "query" instead of "question" to match standardized backend DTO
   const response = await api.post('/api/v1/assistant/ask', { query: question });
-  const { data } = response;
-  
-  // Handle all possible response shapes from the backend
-  if (typeof data === 'string') return data;
-  if (data.response) return data.response; // Standardized field
-  if (data.answer) return data.answer; // Legacy/Fallback support
-  if (data.message) return data.message;
-  
-  return 'I received a response in an unexpected format.';
+  return response.data.response;
 };
